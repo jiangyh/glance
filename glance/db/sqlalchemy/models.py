@@ -156,6 +156,7 @@ class ImageProperty(BASE, GlanceBase):
 
     name = Column(String(255), nullable=False)
     value = Column(Text)
+    required = Column(Boolean, default=True)
 
 
 class ImageTag(BASE, GlanceBase):

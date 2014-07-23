@@ -21,6 +21,7 @@ import copy
 
 import eventlet
 from oslo.config import cfg
+import re
 import six.moves.urllib.parse as urlparse
 from webob.exc import HTTPBadRequest
 from webob.exc import HTTPConflict
@@ -122,13 +123,10 @@ def redact_loc(image_meta, copy_dict=True):
     return new_image_meta
 
 
-def _ns(tag):
-    ovf="{http://schemas.dmtf.org/ovf/envelope/1}"
-    return ovf+tag
-
 def _rns(tag):
-    ovf="{http://schemas.dmtf.org/ovf/envelope/1}"
-    return tag[len(ovf):]
+    match = re.search(r'\{.*?\}(.*)', tag)
+    return match.group(1) if match else tag
+
 
 class Controller(controller.BaseController):
     """
@@ -811,8 +809,9 @@ class Controller(controller.BaseController):
         if image_meta.get('ovf_meta_import_enable') == 'true':
             # need to break up the ova file from image_data
             # pass in ovf file for parsing
+            # if multiple tags match, take the first one/last one?
             with open('log', 'w') as f:
-                xml_tags = ['Disk', 'Property']
+                xml_tags = ['LinuxMount', 'Label', 'Info', 'Disk']
                 ovf_prop = self._parse_ovf('sampleovf.xml', xml_tags)
                 image_meta['properties'].update(ovf_prop)
                 f.write(str(image_meta)+'\n')
@@ -860,12 +859,17 @@ class Controller(controller.BaseController):
         tree = ET.ElementTree(file=ovf_file)
         ovf_prop = {}
         with open('parse-log', 'w') as f:
-            elems = (elem for elem in tree.iter() if _rns(elem.tag) in xml_tags)
+            elems = [elem for elem in tree.iter() if _rns(elem.tag) in xml_tags]
             for elem in elems:
                 f.write(_rns(elem.tag)+'\n')
                 for attr in elem.attrib:
                     f.write(_rns(attr)+': '+elem.attrib[attr]+'\n')
                     ovf_prop[_rns(attr)] = elem.attrib[attr]
+                if len(elem.attrib) == 0:
+                    #retreive element text content if no attributes
+                    content = elem.text.strip()
+                    f.write(_rns(elem.tag)+': '+content+'\n')
+                    ovf_prop[_rns(elem.tag)] = content
                 f.write('~'*20+'\n')
 
         return ovf_prop
