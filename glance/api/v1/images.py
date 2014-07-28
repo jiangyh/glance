@@ -811,7 +811,7 @@ class Controller(controller.BaseController):
             # pass in ovf file for parsing
             # if multiple tags match, take the first one/last one?
             with open('log', 'w') as f:
-                xml_tags = ['LinuxMount', 'Label', 'Info', 'Disk']
+                xml_tags = ['LinuxMount', 'Label', 'Info', 'Disk', 'VirtualHardwareSection']
                 ovf_prop = self._parse_ovf('sampleovf.xml', xml_tags)
                 image_meta['properties'].update(ovf_prop)
                 f.write(str(image_meta)+'\n')
@@ -856,21 +856,19 @@ class Controller(controller.BaseController):
 
         :retval Returns the ovf properties as a key-value mapping
         """
-        tree = ET.ElementTree(file=ovf_file)
         ovf_prop = {}
         with open('parse-log', 'w') as f:
-            elems = [elem for elem in tree.iter() if _rns(elem.tag) in xml_tags]
-            for elem in elems:
-                f.write(_rns(elem.tag)+'\n')
-                for attr in elem.attrib:
-                    f.write(_rns(attr)+': '+elem.attrib[attr]+'\n')
-                    ovf_prop[_rns(attr)] = elem.attrib[attr]
-                if len(elem.attrib) == 0:
-                    #retreive element text content if no attributes
-                    content = elem.text.strip()
+            for event, elem in ET.iterparse(ovf_file):
+                if event == 'end' and _rns(elem.tag) in xml_tags:
+                    f.write(_rns(elem.tag)+'\n')
+                    for attr in elem.attrib:
+                        f.write(_rns(attr)+': '+elem.attrib[attr]+'\n')
+                        ovf_prop[_rns(elem.tag)+'.'+_rns(attr)] = elem.attrib[attr]
+                    content = elem.text.strip() if elem.text else ''
                     f.write(_rns(elem.tag)+': '+content+'\n')
-                    ovf_prop[_rns(elem.tag)] = content
-                f.write('~'*20+'\n')
+                    if content: ovf_prop[_rns(elem.tag)] = content
+                    f.write('~'*20+'\n')
+                elem.clear()
 
         return ovf_prop
 
