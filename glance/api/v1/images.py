@@ -806,19 +806,14 @@ class Controller(controller.BaseController):
                 and the request body is not application/octet-stream
                 image data.
         """
-        if image_meta.get('ovf_meta_import_enable') == 'true':
+        if image_meta.get('ovf_meta_import_enable').lower() == 'true':
             # need to break up the ova file from image_data
             # pass in ovf file for parsing
             # if multiple tags match, take the first one/last one?
-            with open('log', 'w') as f:
-                xml_tags = ['LinuxMount', 'Label', 'Info', 'Disk', 'VirtualHardwareSection']
-                ovf_prop = self._parse_ovf('sampleovf.xml', xml_tags)
-                image_meta['properties'].update(ovf_prop)
-                f.write(str(image_meta)+'\n')
-                #f.write('\n\n\n'+str(image_data)+'\n')
-        else:
-            with open('log', 'w') as f:
-                f.write('ovf_meta_import_enable is false or not set\n')
+            xml_tags = ['LinuxMount', 'Label', 'Info', 'Disk', 'VirtualHardwareSection']
+            ovf_prop = self._parse_ovf('sampleovf.xml', xml_tags)
+            image_meta['properties'].update(ovf_prop)
+            LOG.info(_('Image Meta: %s') % image_meta)
 
         self._enforce(req, 'add_image')
         is_public = image_meta.get('is_public')
@@ -857,18 +852,13 @@ class Controller(controller.BaseController):
         :retval Returns the ovf properties as a key-value mapping
         """
         ovf_prop = {}
-        with open('parse-log', 'w') as f:
-            for event, elem in ET.iterparse(ovf_file):
-                if event == 'end' and _rns(elem.tag) in xml_tags:
-                    f.write(_rns(elem.tag)+'\n')
-                    for attr in elem.attrib:
-                        f.write(_rns(attr)+': '+elem.attrib[attr]+'\n')
-                        ovf_prop[_rns(elem.tag)+'.'+_rns(attr)] = elem.attrib[attr]
-                    content = elem.text.strip() if elem.text else ''
-                    f.write(_rns(elem.tag)+': '+content+'\n')
-                    if content: ovf_prop[_rns(elem.tag)] = content
-                    f.write('~'*20+'\n')
-                elem.clear()
+        for event, elem in ET.iterparse(ovf_file):
+            if event == 'end' and _rns(elem.tag) in xml_tags:
+                for attr in elem.attrib:
+                    ovf_prop[_rns(elem.tag) + '.' + _rns(attr)] = elem.attrib[attr]
+                content = elem.text.strip() if elem.text else None
+                if content: ovf_prop[_rns(elem.tag)] = content
+            elem.clear()
 
         return ovf_prop
 
