@@ -53,6 +53,8 @@ within this package.</ovf:Info>
     <ovf:Disk ovf:diskId="EXAMPLE2:swap"
               ovf:capacity="1040187392"
               ovf:capacityAllocationUnits="byte"/>
+    <Processor_Architecture>x86-64</Processor_Architecture>
+    <InstructionSet>x86-64</InstructionSet>
   </ovf:DiskSection>
   <ovf:NetworkSection>
     <!-- This section contains a list of logical networks to which any network interfaces 

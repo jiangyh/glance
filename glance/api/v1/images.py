@@ -807,10 +807,9 @@ class Controller(controller.BaseController):
                 image data.
         """
         if image_meta.get('ovf_meta_import_enable').lower() == 'true':
-            # need to break up the ova file from image_data
             # pass in ovf file for parsing
-            # if multiple tags match, take the first one/last one?
-            xml_tags = ['LinuxMount', 'Label', 'Info', 'Disk', 'VirtualHardwareSection']
+            xml_tags = ['Processor_Architecture', 'InstructionSet', 'Label',
+                        'Info', 'Disk', 'VirtualHardwareSection']
             ovf_prop = self._parse_ovf('sampleovf.xml', xml_tags)
             image_meta['properties'].update(ovf_prop)
             LOG.info(_('Image Meta: %s') % image_meta)
